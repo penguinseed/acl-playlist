@@ -506,7 +506,7 @@
 <div class="container">
 
   <div class="header">
-    <div class="eyebrow">✦ Austin City Limits 2026 &nbsp;·&nbsp; v5</div>
+    <div class="eyebrow">✦ Austin City Limits 2026 &nbsp;·&nbsp; v6</div>
     <h1>ACL<br><span>Playlist</span><br>Builder</h1>
     <p class="subtitle">Upload your artist lineup with tier rankings. We'll build a weighted Spotify playlist — more tracks from your must-sees, fewer from your maybes.</p>
   </div>
@@ -964,9 +964,8 @@ async function buildPlaylist() {
         log('  Matched: ' + foundArtist.name, 'ok');
 
         // Use track search instead of /top-tracks (avoids 403 restriction)
-        const trackRes = await spotifyGet(
-          '/search?q=' + encodeURIComponent(foundArtist.name) + '&type=track&limit=20&market=' + market
-        );
+        const trackParams = new URLSearchParams({ q: foundArtist.name, type: 'track', limit: '10', offset: '0', market: market });
+        const trackRes = await spotifyGet('/search?' + trackParams.toString());
         const allTracks = (trackRes.tracks && trackRes.tracks.items) || [];
 
         // Deduplicate by track name, only include tracks where this artist is primary, sort by popularity
