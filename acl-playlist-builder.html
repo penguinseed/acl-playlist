@@ -1,0 +1,1036 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ACL Playlist Builder</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a08;
+    --surface: #111110;
+    --surface2: #1a1a18;
+    --border: #2a2a26;
+    --accent: #d4f044;
+    --accent2: #f0a844;
+    --text: #e8e8e0;
+    --muted: #6a6a60;
+    --danger: #f05044;
+    --success: #44f09a;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Background texture */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      radial-gradient(ellipse 60% 40% at 80% 10%, rgba(212,240,68,0.06) 0%, transparent 60%),
+      radial-gradient(ellipse 40% 60% at 10% 80%, rgba(240,168,68,0.05) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 48px 24px 80px;
+  }
+
+  /* Header */
+  .header {
+    margin-bottom: 48px;
+  }
+
+  .eyebrow {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 12px;
+  }
+
+  h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(52px, 10vw, 96px);
+    line-height: 0.92;
+    letter-spacing: 0.01em;
+    color: var(--text);
+    margin-bottom: 16px;
+  }
+
+  h1 span { color: var(--accent); }
+
+  .subtitle {
+    font-size: 15px;
+    color: var(--muted);
+    font-weight: 300;
+    line-height: 1.6;
+    max-width: 480px;
+  }
+
+  /* Steps */
+  .steps {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .step {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+
+  .step.active { border-color: var(--accent); }
+  .step.done { border-color: #2a3a1a; }
+
+  .step-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 20px 24px;
+  }
+
+  .step-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px;
+    color: var(--muted);
+    min-width: 32px;
+    line-height: 1;
+    transition: color 0.2s;
+  }
+
+  .step.active .step-num { color: var(--accent); }
+  .step.done .step-num { color: var(--success); }
+
+  .step-title {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text);
+  }
+
+  .step-badge {
+    margin-left: auto;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 2px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .step.done .step-badge {
+    background: rgba(68,240,154,0.12);
+    color: var(--success);
+  }
+
+  .step-body {
+    padding: 0 24px 24px 72px;
+    display: none;
+  }
+
+  .step.active .step-body { display: block; }
+
+  /* Form elements */
+  label {
+    display: block;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+
+  input[type="text"], input[type="password"] {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 12px 14px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  input[type="text"]:focus, input[type="password"]:focus {
+    border-color: var(--accent);
+  }
+
+  .field-group { margin-bottom: 16px; }
+
+  .hint {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 6px;
+    line-height: 1.5;
+  }
+
+  .hint a {
+    color: var(--accent2);
+    text-decoration: none;
+  }
+
+  .hint a:hover { text-decoration: underline; }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 22px;
+    border-radius: 3px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    border: none;
+    transition: all 0.15s;
+    text-decoration: none;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #0a0a08;
+    font-weight: 500;
+  }
+
+  .btn-primary:hover { background: #c8e03a; transform: translateY(-1px); }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  .btn-outline {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+
+  .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+
+  .btn-spotify {
+    background: #1DB954;
+    color: #000;
+    font-weight: 500;
+  }
+
+  .btn-spotify:hover { background: #1ed760; }
+
+  /* Upload zone */
+  .upload-zone {
+    border: 2px dashed var(--border);
+    border-radius: 4px;
+    padding: 32px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+  }
+
+  .upload-zone:hover, .upload-zone.dragover {
+    border-color: var(--accent);
+    background: rgba(212,240,68,0.04);
+  }
+
+  .upload-zone input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+  }
+
+  .upload-icon { font-size: 28px; margin-bottom: 8px; }
+  .upload-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  /* Tier config */
+  .tier-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .tier-item {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .tier-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+  }
+
+  .tier-input {
+    width: 48px !important;
+    padding: 6px 8px !important;
+    text-align: center;
+  }
+
+  /* Artist table preview */
+  .preview-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    margin-bottom: 16px;
+  }
+
+  .preview-table th {
+    text-align: left;
+    padding: 8px 12px;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-size: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .preview-table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid rgba(42,42,38,0.5);
+  }
+
+  .tier-pill {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 2px;
+    font-size: 10px;
+    font-weight: 500;
+  }
+
+  .tier-1 { background: rgba(212,240,68,0.15); color: var(--accent); }
+  .tier-2 { background: rgba(240,168,68,0.15); color: var(--accent2); }
+  .tier-3 { background: rgba(240,80,68,0.1); color: #f09080; }
+  .tier-4 { background: rgba(100,100,180,0.15); color: #a0a0e0; }
+  .tier-5 { background: rgba(100,100,100,0.15); color: var(--muted); }
+
+  /* Progress */
+  .progress-wrap {
+    margin-bottom: 16px;
+  }
+
+  .progress-bar-bg {
+    height: 4px;
+    background: var(--surface2);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 8px;
+  }
+
+  .progress-bar-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.3s ease;
+    width: 0%;
+  }
+
+  .progress-text {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  /* Log */
+  .log {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 16px;
+    max-height: 200px;
+    overflow-y: auto;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    line-height: 1.8;
+  }
+
+  .log-line { color: var(--muted); }
+  .log-line.ok { color: var(--success); }
+  .log-line.err { color: var(--danger); }
+  .log-line.info { color: var(--accent2); }
+
+  /* Result */
+  .result-card {
+    background: linear-gradient(135deg, rgba(212,240,68,0.08), rgba(68,240,154,0.05));
+    border: 1px solid rgba(212,240,68,0.2);
+    border-radius: 4px;
+    padding: 28px;
+    text-align: center;
+  }
+
+  .result-icon { font-size: 48px; margin-bottom: 12px; }
+  .result-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 36px;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+
+  .result-sub {
+    font-size: 14px;
+    color: var(--muted);
+    margin-bottom: 20px;
+  }
+
+  /* Alert */
+  .alert {
+    padding: 12px 16px;
+    border-radius: 3px;
+    font-size: 13px;
+    margin-bottom: 16px;
+    line-height: 1.5;
+  }
+
+  .alert-info {
+    background: rgba(240,168,68,0.08);
+    border: 1px solid rgba(240,168,68,0.2);
+    color: var(--accent2);
+  }
+
+  .alert-err {
+    background: rgba(240,80,68,0.08);
+    border: 1px solid rgba(240,80,68,0.2);
+    color: var(--danger);
+  }
+
+  /* Instructions box */
+  .instructions {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent2);
+    border-radius: 3px;
+    padding: 16px 18px;
+    margin-bottom: 20px;
+  }
+
+  .instructions ol {
+    padding-left: 18px;
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 2;
+  }
+
+  .instructions ol li { color: var(--text); }
+  .instructions ol li span { color: var(--muted); font-size: 12px; }
+
+  code {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 1px 6px;
+    border-radius: 2px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--accent);
+  }
+
+  .row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  .playlist-name-row {
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+    margin-bottom: 16px;
+  }
+
+  .playlist-name-row .field-group {
+    flex: 1;
+    margin-bottom: 0;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* Template download */
+  .template-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--accent2);
+    text-decoration: none;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    border: none;
+    background: none;
+    padding: 0;
+    margin-bottom: 16px;
+  }
+
+  .template-link:hover { text-decoration: underline; }
+
+  @media (max-width: 480px) {
+    .step-body { padding-left: 24px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <div class="eyebrow">✦ Austin City Limits 2026</div>
+    <h1>ACL<br><span>Playlist</span><br>Builder</h1>
+    <p class="subtitle">Upload your artist lineup with tier rankings. We'll build a weighted Spotify playlist — more tracks from your must-sees, fewer from your maybes.</p>
+  </div>
+
+  <div class="steps">
+
+    <!-- STEP 1: Spotify App Setup -->
+    <div class="step active" id="step1">
+      <div class="step-header">
+        <div class="step-num">01</div>
+        <div class="step-title">Connect Spotify</div>
+      </div>
+      <div class="step-body">
+        <div class="instructions">
+          <ol>
+            <li><strong>Serve this file locally first</strong> — open Terminal, <code>cd</code> to the folder with this file, run <code>python3 -m http.server 8888</code>, then visit <a href="http://localhost:8888" target="_blank" style="color:var(--accent2)">http://localhost:8888</a> in your browser <span>(Spotify requires http:// — not file://)</span></li>
+            <li>Go to <a href="https://developer.spotify.com/dashboard" target="_blank" style="color:var(--accent2)">developer.spotify.com/dashboard</a> and log in</li>
+            <li>Click <strong>Create App</strong> — name it anything (e.g. "ACL Builder")</li>
+            <li>Set Redirect URI to: <code id="redirect-uri-display"></code> <span>← copy exactly from the address bar</span></li>
+            <li>Check the <strong>Web API</strong> checkbox, save</li>
+            <li>Open your new app → <strong>Settings</strong> → copy the <strong>Client ID</strong> below</li>
+          </ol>
+        </div>
+
+        <div class="field-group">
+          <label>Spotify Client ID</label>
+          <input type="text" id="client-id" placeholder="e.g. 1a2b3c4d5e6f7g8h9i0j..." />
+          <div class="hint">Found in your Spotify Developer Dashboard under your app's Settings.</div>
+        </div>
+
+        <div class="field-group">
+          <label>Playlist Name</label>
+          <input type="text" id="playlist-name" value="ACL 2026 — My Lineup" />
+        </div>
+
+        <button class="btn btn-spotify" onclick="startAuth()" id="auth-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg>
+          Authorize with Spotify
+        </button>
+        <div id="auth-status" style="margin-top:12px;font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);"></div>
+      </div>
+    </div>
+
+    <!-- STEP 2: Upload CSV -->
+    <div class="step" id="step2">
+      <div class="step-header">
+        <div class="step-num">02</div>
+        <div class="step-title">Upload Artist List</div>
+      </div>
+      <div class="step-body">
+        <button class="template-link" onclick="downloadTemplate()">⬇ Download CSV Template</button>
+
+        <div class="alert alert-info">
+          CSV format: two columns — <strong>Artist</strong> and <strong>Tier</strong>. Tier 1 = highest priority. Example: <code>Charli XCX, 1</code>
+        </div>
+
+        <div class="upload-zone" id="upload-zone">
+          <input type="file" id="csv-file" accept=".csv,.tsv" onchange="handleFile(this)" />
+          <div class="upload-icon">📄</div>
+          <div class="upload-label">Drop CSV here or click to browse</div>
+        </div>
+
+        <div id="preview-area" style="margin-top:16px; display:none;">
+          <label style="margin-bottom:8px;">Preview — <span id="preview-count"></span></label>
+          <div style="overflow-x:auto; max-height:240px; overflow-y:auto;">
+            <table class="preview-table" id="preview-table">
+              <thead><tr><th>#</th><th>Artist</th><th>Tier</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <button class="btn btn-outline" onclick="nextStep(2)" style="margin-top:16px;">Looks Good →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3: Configure Tiers -->
+    <div class="step" id="step3">
+      <div class="step-header">
+        <div class="step-num">03</div>
+        <div class="step-title">Configure Song Counts</div>
+      </div>
+      <div class="step-body">
+        <div class="hint" style="margin-bottom:16px;">Set how many top tracks to include per artist for each tier. Spotify provides up to 10 top tracks per artist.</div>
+        <div class="tier-grid" id="tier-config"></div>
+        <div class="field-group">
+          <label>Song market (country code)</label>
+          <input type="text" id="market" value="US" style="width:80px;" />
+        </div>
+        <button class="btn btn-primary" onclick="buildPlaylist()" id="build-btn">
+          Build Playlist →
+        </button>
+      </div>
+    </div>
+
+    <!-- STEP 4: Building -->
+    <div class="step" id="step4">
+      <div class="step-header">
+        <div class="step-num">04</div>
+        <div class="step-title">Building Playlist</div>
+      </div>
+      <div class="step-body">
+        <div class="progress-wrap">
+          <div class="progress-bar-bg"><div class="progress-bar-fill" id="prog-bar"></div></div>
+          <div class="progress-text" id="prog-text">Starting…</div>
+        </div>
+        <div class="log" id="log"></div>
+      </div>
+    </div>
+
+    <!-- STEP 5: Done -->
+    <div class="step" id="step5">
+      <div class="step-header">
+        <div class="step-num">05</div>
+        <div class="step-title">Done</div>
+      </div>
+      <div class="step-body">
+        <div class="result-card">
+          <div class="result-icon">🎵</div>
+          <div class="result-title">Playlist Created!</div>
+          <div class="result-sub" id="result-sub">Your ACL playlist is ready in Spotify.</div>
+          <div class="row" style="justify-content:center; gap:12px;">
+            <a id="playlist-link" class="btn btn-spotify" href="#" target="_blank">Open in Spotify</a>
+            <button class="btn btn-outline" onclick="location.reload()">Start Over</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ─── State ───────────────────────────────────────────────────────────────────
+let accessToken = null;
+let spotifyUserId = null;
+let artists = []; // [{name, tier}]
+const SCOPES = 'playlist-modify-public playlist-modify-private';
+
+// ─── Redirect URI (this page's URL) ──────────────────────────────────────────
+function getRedirectUri() {
+  return window.location.href.split('?')[0].split('#')[0];
+}
+
+document.getElementById('redirect-uri-display').textContent = getRedirectUri();
+
+// ─── PKCE helpers ─────────────────────────────────────────────────────────────
+function generateRandomString(length) {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  const arr = new Uint8Array(length);
+  crypto.getRandomValues(arr);
+  return Array.from(arr).map(x => chars[x % chars.length]).join('');
+}
+
+async function generateCodeChallenge(verifier) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(verifier);
+  const digest = await crypto.subtle.digest('SHA-256', data);
+  return btoa(String.fromCharCode(...new Uint8Array(digest)))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+// ─── Auth ─────────────────────────────────────────────────────────────────────
+async function startAuth() {
+  const clientId = document.getElementById('client-id').value.trim();
+  if (!clientId) { alert('Please enter your Spotify Client ID first.'); return; }
+  if (!document.getElementById('playlist-name').value.trim()) {
+    alert('Please enter a playlist name.'); return;
+  }
+
+  sessionStorage.setItem('spotify_client_id', clientId);
+  sessionStorage.setItem('playlist_name', document.getElementById('playlist-name').value.trim());
+
+  const verifier = generateRandomString(64);
+  const challenge = await generateCodeChallenge(verifier);
+  const state = generateRandomString(16);
+
+  sessionStorage.setItem('pkce_verifier', verifier);
+  sessionStorage.setItem('pkce_state', state);
+
+  const params = new URLSearchParams({
+    response_type: 'code',
+    client_id: clientId,
+    scope: SCOPES,
+    redirect_uri: getRedirectUri(),
+    state: state,
+    code_challenge_method: 'S256',
+    code_challenge: challenge,
+  });
+  window.location = 'https://accounts.spotify.com/authorize?' + params.toString();
+}
+
+// ─── Handle redirect back from Spotify (PKCE code exchange) ──────────────────
+async function parseCallback() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const code = urlParams.get('code');
+  const returnedState = urlParams.get('state');
+  const error = urlParams.get('error');
+
+  if (error) {
+    document.getElementById('auth-status').textContent = '✗ Auth error: ' + error;
+    document.getElementById('auth-status').style.color = 'var(--danger)';
+    return;
+  }
+
+  if (!code) return;
+
+  const savedState = sessionStorage.getItem('pkce_state');
+  if (returnedState !== savedState) {
+    document.getElementById('auth-status').textContent = '✗ State mismatch — possible CSRF. Please try again.';
+    document.getElementById('auth-status').style.color = 'var(--danger)';
+    return;
+  }
+
+  const clientId = sessionStorage.getItem('spotify_client_id');
+  const verifier = sessionStorage.getItem('pkce_verifier');
+
+  // Clean URL
+  history.replaceState(null, '', window.location.pathname);
+
+  document.getElementById('auth-status').textContent = 'Exchanging code for token…';
+
+  try {
+    const resp = await fetch('https://accounts.spotify.com/api/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'authorization_code',
+        code: code,
+        redirect_uri: getRedirectUri(),
+        client_id: clientId,
+        code_verifier: verifier,
+      })
+    });
+
+    if (!resp.ok) {
+      const err = await resp.text();
+      throw new Error(err);
+    }
+
+    const data = await resp.json();
+    accessToken = data.access_token;
+
+    // Restore saved values
+    const savedName = sessionStorage.getItem('playlist_name');
+    if (clientId) document.getElementById('client-id').value = clientId;
+    if (savedName) document.getElementById('playlist-name').value = savedName;
+
+    markDone(1);
+    activateStep(2);
+    document.getElementById('auth-status').textContent = '✓ Authorized!';
+    document.getElementById('auth-status').style.color = 'var(--success)';
+
+  } catch (e) {
+    document.getElementById('auth-status').textContent = '✗ Token exchange failed: ' + e.message;
+    document.getElementById('auth-status').style.color = 'var(--danger)';
+  }
+}
+
+parseCallback();
+
+// ─── Step management ──────────────────────────────────────────────────────────
+function markDone(n) {
+  const el = document.getElementById('step' + n);
+  el.classList.remove('active');
+  el.classList.add('done');
+  const badge = document.createElement('div');
+  badge.className = 'step-badge';
+  badge.textContent = 'Done';
+  el.querySelector('.step-header').appendChild(badge);
+}
+
+function activateStep(n) {
+  const el = document.getElementById('step' + n);
+  el.classList.add('active');
+  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function nextStep(from) {
+  markDone(from);
+  activateStep(from + 1);
+  if (from + 1 === 3) renderTierConfig();
+}
+
+// ─── CSV handling ─────────────────────────────────────────────────────────────
+function downloadTemplate() {
+  const csv = 'Artist,Tier\nCharli XCX,1\nLorde,1\nKings of Leon,2\nTurnstile,2\nBlood Orange,3\nGeese,3\nLola Young,4\n';
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'acl-2026-artists.csv';
+  a.click();
+}
+
+function handleFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => parseCSV(e.target.result);
+  reader.readAsText(file);
+
+  const zone = document.getElementById('upload-zone');
+  zone.style.borderColor = 'var(--accent)';
+}
+
+function parseCSV(text) {
+  const lines = text.trim().split(/\r?\n/).filter(l => l.trim());
+  const rows = [];
+  let start = 0;
+
+  // Detect header
+  const firstCols = lines[0].split(',');
+  if (isNaN(parseInt(firstCols[firstCols.length - 1]))) start = 1;
+
+  for (let i = start; i < lines.length; i++) {
+    const parts = lines[i].split(',');
+    if (parts.length < 2) continue;
+    const tier = parseInt(parts[parts.length - 1].trim());
+    const name = parts.slice(0, parts.length - 1).join(',').trim().replace(/^"|"$/g, '');
+    if (name && !isNaN(tier)) rows.push({ name, tier });
+  }
+
+  if (!rows.length) {
+    alert('Could not parse CSV. Please use the template format: Artist, Tier');
+    return;
+  }
+
+  artists = rows;
+  renderPreview();
+}
+
+function renderPreview() {
+  const tbody = document.querySelector('#preview-table tbody');
+  tbody.innerHTML = '';
+  artists.forEach((a, i) => {
+    const tr = document.createElement('tr');
+    const tierClass = 'tier-' + Math.min(a.tier, 5);
+    tr.innerHTML = `<td style="color:var(--muted)">${i+1}</td><td>${a.name}</td><td><span class="tier-pill ${tierClass}">T${a.tier}</span></td>`;
+    tbody.appendChild(tr);
+  });
+  document.getElementById('preview-count').textContent = artists.length + ' artists';
+  document.getElementById('preview-area').style.display = 'block';
+}
+
+// Drag and drop
+const zone = document.getElementById('upload-zone');
+zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+zone.addEventListener('drop', e => {
+  e.preventDefault();
+  zone.classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file) {
+    document.getElementById('csv-file').files = e.dataTransfer.files;
+    const reader = new FileReader();
+    reader.onload = ev => parseCSV(ev.target.result);
+    reader.readAsText(file);
+    zone.style.borderColor = 'var(--accent)';
+  }
+});
+
+// ─── Tier config ──────────────────────────────────────────────────────────────
+const DEFAULT_SONGS = { 1: 5, 2: 3, 3: 2, 4: 1 };
+
+function renderTierConfig() {
+  const tiers = [...new Set(artists.map(a => a.tier))].sort((a, b) => a - b);
+  const grid = document.getElementById('tier-config');
+  grid.innerHTML = '';
+  tiers.forEach(t => {
+    const def = DEFAULT_SONGS[t] || 1;
+    const div = document.createElement('div');
+    div.className = 'tier-item';
+    div.innerHTML = `<span class="tier-label">Tier ${t}</span><input type="number" class="tier-input" id="songs-tier-${t}" value="${def}" min="1" max="10" />
+    <span style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;">songs</span>`;
+    grid.appendChild(div);
+  });
+}
+
+function getSongsForTier(tier) {
+  const el = document.getElementById('songs-tier-' + tier);
+  return el ? parseInt(el.value) || 1 : 1;
+}
+
+// ─── Spotify API helpers ──────────────────────────────────────────────────────
+async function spotifyGet(path) {
+  const r = await fetch('https://api.spotify.com/v1' + path, {
+    headers: { Authorization: 'Bearer ' + accessToken }
+  });
+  if (!r.ok) throw new Error('Spotify error: ' + r.status + ' on ' + path);
+  return r.json();
+}
+
+async function spotifyPost(path, body) {
+  const r = await fetch('https://api.spotify.com/v1' + path, {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  if (!r.ok) {
+    const err = await r.text();
+    throw new Error('Spotify POST error: ' + r.status + ' — ' + err);
+  }
+  return r.json();
+}
+
+// ─── Log helper ───────────────────────────────────────────────────────────────
+function log(msg, type = '') {
+  const el = document.getElementById('log');
+  const line = document.createElement('div');
+  line.className = 'log-line ' + type;
+  line.textContent = msg;
+  el.appendChild(line);
+  el.scrollTop = el.scrollHeight;
+}
+
+function setProgress(pct, text) {
+  document.getElementById('prog-bar').style.width = pct + '%';
+  document.getElementById('prog-text').textContent = text;
+}
+
+// ─── Main build ───────────────────────────────────────────────────────────────
+async function buildPlaylist() {
+  if (!accessToken) { alert('Please authorize Spotify first.'); return; }
+  if (!artists.length) { alert('Please upload your artist CSV first.'); return; }
+
+  markDone(3);
+  activateStep(4);
+
+  const market = document.getElementById('market').value.trim() || 'US';
+  const playlistName = sessionStorage.getItem('playlist_name') || document.getElementById('playlist-name').value.trim() || 'ACL 2026';
+  const trackUris = [];
+  const total = artists.length;
+  let done = 0;
+  let notFound = [];
+
+  try {
+    // Get user ID
+    log('Fetching your Spotify profile…', 'info');
+    const me = await spotifyGet('/me');
+    spotifyUserId = me.id;
+    log('Logged in as: ' + me.display_name, 'ok');
+
+    // Search each artist
+    for (const artist of artists) {
+      const count = getSongsForTier(artist.tier);
+      log(`Searching: ${artist.name} (Tier ${artist.tier} → ${count} songs)…`);
+
+      try {
+        // Search for artist
+        const searchRes = await spotifyGet(
+          `/search?q=${encodeURIComponent(artist.name)}&type=artist&limit=1&market=${market}`
+        );
+        const items = searchRes.artists?.items;
+
+        if (!items || !items.length) {
+          log(`  ✗ Not found: ${artist.name}`, 'err');
+          notFound.push(artist.name);
+          done++;
+          setProgress(Math.round((done / total) * 80), `${done}/${total} artists processed`);
+          continue;
+        }
+
+        const foundArtist = items[0];
+        log(`  ✓ Found: ${foundArtist.name}`, 'ok');
+
+        // Get top tracks
+        const topRes = await spotifyGet(
+          `/artists/${foundArtist.id}/top-tracks?market=${market}`
+        );
+        const tracks = (topRes.tracks || []).slice(0, count);
+        tracks.forEach(t => trackUris.push(t.uri));
+        log(`    Added ${tracks.length} tracks`, 'ok');
+
+      } catch (e) {
+        log(`  ✗ Error for ${artist.name}: ${e.message}`, 'err');
+        notFound.push(artist.name);
+      }
+
+      done++;
+      setProgress(Math.round((done / total) * 80), `${done}/${total} artists processed`);
+      await sleep(150); // be polite to rate limits
+    }
+
+    if (!trackUris.length) throw new Error('No tracks found — check artist names and try again.');
+
+    // Create playlist
+    log('Creating playlist: ' + playlistName + '…', 'info');
+    setProgress(85, 'Creating playlist…');
+    const playlist = await spotifyPost(`/users/${spotifyUserId}/playlists`, {
+      name: playlistName,
+      description: `ACL 2026 prep playlist — ${artists.length} artists, tiered by priority. Built with ACL Playlist Builder.`,
+      public: false
+    });
+
+    // Add tracks in batches of 100
+    setProgress(90, 'Adding tracks…');
+    for (let i = 0; i < trackUris.length; i += 100) {
+      await spotifyPost(`/playlists/${playlist.id}/tracks`, {
+        uris: trackUris.slice(i, i + 100)
+      });
+    }
+
+    setProgress(100, 'Done!');
+    log(`✓ Playlist created with ${trackUris.length} tracks!`, 'ok');
+    if (notFound.length) log(`Note: ${notFound.length} artist(s) not found: ${notFound.join(', ')}`, 'err');
+
+    // Show success
+    markDone(4);
+    activateStep(5);
+    document.getElementById('result-sub').textContent =
+      `${trackUris.length} tracks across ${artists.length - notFound.length} artists — ready in Spotify.` +
+      (notFound.length ? ` (${notFound.length} not found: ${notFound.join(', ')})` : '');
+    document.getElementById('playlist-link').href = playlist.external_urls.spotify;
+
+  } catch (e) {
+    log('FATAL: ' + e.message, 'err');
+    const errDiv = document.createElement('div');
+    errDiv.className = 'alert alert-err';
+    errDiv.style.marginTop = '12px';
+    errDiv.textContent = 'Error: ' + e.message;
+    document.getElementById('step4').querySelector('.step-body').appendChild(errDiv);
+  }
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+</script>
+</body>
+</html>
