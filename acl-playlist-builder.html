@@ -506,7 +506,7 @@
 <div class="container">
 
   <div class="header">
-    <div class="eyebrow">✦ Austin City Limits 2026</div>
+    <div class="eyebrow">✦ Austin City Limits 2026 &nbsp;·&nbsp; v4</div>
     <h1>ACL<br><span>Playlist</span><br>Builder</h1>
     <p class="subtitle">Upload your artist lineup with tier rankings. We'll build a weighted Spotify playlist — more tracks from your must-sees, fewer from your maybes.</p>
   </div>
@@ -643,7 +643,7 @@
 let accessToken = null;
 let spotifyUserId = null;
 let artists = [];
-const SCOPES = 'playlist-modify-public playlist-modify-private';
+const SCOPES = 'playlist-modify-public playlist-modify-private user-read-private user-read-email';
 
 // Redirect URI
 function getRedirectUri() {
@@ -869,7 +869,11 @@ async function spotifyGet(path) {
   const r = await fetch('https://api.spotify.com/v1' + path, {
     headers: { Authorization: 'Bearer ' + accessToken }
   });
-  if (!r.ok) throw new Error('Spotify error: ' + r.status + ' on ' + path);
+  if (!r.ok) {
+    let body = '';
+    try { const j = await r.json(); body = JSON.stringify(j); } catch(e) { body = await r.text().catch(()=>''); }
+    throw new Error('Spotify error: ' + r.status + ' on ' + path + ' | ' + body);
+  }
   return r.json();
 }
 
