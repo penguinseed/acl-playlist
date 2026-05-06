@@ -639,20 +639,20 @@
 </div>
 
 <script>
-// ─── State ───────────────────────────────────────────────────────────────────
+// State
 let accessToken = null;
 let spotifyUserId = null;
-let artists = []; // [{name, tier}]
+let artists = [];
 const SCOPES = 'playlist-modify-public playlist-modify-private';
 
-// ─── Redirect URI (this page's URL) ──────────────────────────────────────────
+// Redirect URI
 function getRedirectUri() {
   return window.location.href.split('?')[0].split('#')[0];
 }
 
 document.getElementById('redirect-uri-display').textContent = getRedirectUri();
 
-// ─── PKCE helpers ─────────────────────────────────────────────────────────────
+// PKCE helpers
 function generateRandomString(length) {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
   const arr = new Uint8Array(length);
@@ -668,21 +668,19 @@ async function generateCodeChallenge(verifier) {
     .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
-// ─── Auth ─────────────────────────────────────────────────────────────────────
+// Auth
 async function startAuth() {
   const clientId = document.getElementById('client-id').value.trim();
   if (!clientId) { alert('Please enter your Spotify Client ID first.'); return; }
   if (!document.getElementById('playlist-name').value.trim()) {
     alert('Please enter a playlist name.'); return;
   }
-
   sessionStorage.setItem('spotify_client_id', clientId);
   sessionStorage.setItem('playlist_name', document.getElementById('playlist-name').value.trim());
 
   const verifier = generateRandomString(64);
   const challenge = await generateCodeChallenge(verifier);
   const state = generateRandomString(16);
-
   sessionStorage.setItem('pkce_verifier', verifier);
   sessionStorage.setItem('pkce_state', state);
 
@@ -698,7 +696,7 @@ async function startAuth() {
   window.location = 'https://accounts.spotify.com/authorize?' + params.toString();
 }
 
-// ─── Handle redirect back from Spotify (PKCE code exchange) ──────────────────
+// Handle redirect back from Spotify
 async function parseCallback() {
   const urlParams = new URLSearchParams(window.location.search);
   const code = urlParams.get('code');
@@ -706,27 +704,23 @@ async function parseCallback() {
   const error = urlParams.get('error');
 
   if (error) {
-    document.getElementById('auth-status').textContent = '✗ Auth error: ' + error;
+    document.getElementById('auth-status').textContent = 'Auth error: ' + error;
     document.getElementById('auth-status').style.color = 'var(--danger)';
     return;
   }
-
   if (!code) return;
 
   const savedState = sessionStorage.getItem('pkce_state');
   if (returnedState !== savedState) {
-    document.getElementById('auth-status').textContent = '✗ State mismatch — possible CSRF. Please try again.';
+    document.getElementById('auth-status').textContent = 'State mismatch - please try again.';
     document.getElementById('auth-status').style.color = 'var(--danger)';
     return;
   }
 
   const clientId = sessionStorage.getItem('spotify_client_id');
   const verifier = sessionStorage.getItem('pkce_verifier');
-
-  // Clean URL
   history.replaceState(null, '', window.location.pathname);
-
-  document.getElementById('auth-status').textContent = 'Exchanging code for token…';
+  document.getElementById('auth-status').textContent = 'Exchanging code for token...';
 
   try {
     const resp = await fetch('https://accounts.spotify.com/api/token', {
@@ -740,34 +734,27 @@ async function parseCallback() {
         code_verifier: verifier,
       })
     });
-
-    if (!resp.ok) {
-      const err = await resp.text();
-      throw new Error(err);
-    }
-
+    if (!resp.ok) { const err = await resp.text(); throw new Error(err); }
     const data = await resp.json();
     accessToken = data.access_token;
 
-    // Restore saved values
     const savedName = sessionStorage.getItem('playlist_name');
     if (clientId) document.getElementById('client-id').value = clientId;
     if (savedName) document.getElementById('playlist-name').value = savedName;
 
     markDone(1);
     activateStep(2);
-    document.getElementById('auth-status').textContent = '✓ Authorized!';
+    document.getElementById('auth-status').textContent = 'Authorized!';
     document.getElementById('auth-status').style.color = 'var(--success)';
-
   } catch (e) {
-    document.getElementById('auth-status').textContent = '✗ Token exchange failed: ' + e.message;
+    document.getElementById('auth-status').textContent = 'Token exchange failed: ' + e.message;
     document.getElementById('auth-status').style.color = 'var(--danger)';
   }
 }
 
 parseCallback();
 
-// ─── Step management ──────────────────────────────────────────────────────────
+// Step management
 function markDone(n) {
   const el = document.getElementById('step' + n);
   el.classList.remove('active');
@@ -790,7 +777,7 @@ function nextStep(from) {
   if (from + 1 === 3) renderTierConfig();
 }
 
-// ─── CSV handling ─────────────────────────────────────────────────────────────
+// CSV handling
 function downloadTemplate() {
   const csv = 'Artist,Tier\nCharli XCX,1\nLorde,1\nKings of Leon,2\nTurnstile,2\nBlood Orange,3\nGeese,3\nLola Young,4\n';
   const blob = new Blob([csv], { type: 'text/csv' });
@@ -806,20 +793,15 @@ function handleFile(input) {
   const reader = new FileReader();
   reader.onload = e => parseCSV(e.target.result);
   reader.readAsText(file);
-
-  const zone = document.getElementById('upload-zone');
-  zone.style.borderColor = 'var(--accent)';
+  document.getElementById('upload-zone').style.borderColor = 'var(--accent)';
 }
 
 function parseCSV(text) {
   const lines = text.trim().split(/\r?\n/).filter(l => l.trim());
   const rows = [];
   let start = 0;
-
-  // Detect header
   const firstCols = lines[0].split(',');
   if (isNaN(parseInt(firstCols[firstCols.length - 1]))) start = 1;
-
   for (let i = start; i < lines.length; i++) {
     const parts = lines[i].split(',');
     if (parts.length < 2) continue;
@@ -827,12 +809,7 @@ function parseCSV(text) {
     const name = parts.slice(0, parts.length - 1).join(',').trim().replace(/^"|"$/g, '');
     if (name && !isNaN(tier)) rows.push({ name, tier });
   }
-
-  if (!rows.length) {
-    alert('Could not parse CSV. Please use the template format: Artist, Tier');
-    return;
-  }
-
+  if (!rows.length) { alert('Could not parse CSV. Please use the template format: Artist, Tier'); return; }
   artists = rows;
   renderPreview();
 }
@@ -843,7 +820,7 @@ function renderPreview() {
   artists.forEach((a, i) => {
     const tr = document.createElement('tr');
     const tierClass = 'tier-' + Math.min(a.tier, 5);
-    tr.innerHTML = `<td style="color:var(--muted)">${i+1}</td><td>${a.name}</td><td><span class="tier-pill ${tierClass}">T${a.tier}</span></td>`;
+    tr.innerHTML = '<td style="color:var(--muted)">' + (i+1) + '</td><td>' + a.name + '</td><td><span class="tier-pill ' + tierClass + '">T' + a.tier + '</span></td>';
     tbody.appendChild(tr);
   });
   document.getElementById('preview-count').textContent = artists.length + ' artists';
@@ -859,7 +836,6 @@ zone.addEventListener('drop', e => {
   zone.classList.remove('dragover');
   const file = e.dataTransfer.files[0];
   if (file) {
-    document.getElementById('csv-file').files = e.dataTransfer.files;
     const reader = new FileReader();
     reader.onload = ev => parseCSV(ev.target.result);
     reader.readAsText(file);
@@ -867,7 +843,7 @@ zone.addEventListener('drop', e => {
   }
 });
 
-// ─── Tier config ──────────────────────────────────────────────────────────────
+// Tier config
 const DEFAULT_SONGS = { 1: 5, 2: 3, 3: 2, 4: 1 };
 
 function renderTierConfig() {
@@ -878,8 +854,7 @@ function renderTierConfig() {
     const def = DEFAULT_SONGS[t] || 1;
     const div = document.createElement('div');
     div.className = 'tier-item';
-    div.innerHTML = `<span class="tier-label">Tier ${t}</span><input type="number" class="tier-input" id="songs-tier-${t}" value="${def}" min="1" max="10" />
-    <span style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;">songs</span>`;
+    div.innerHTML = '<span class="tier-label">Tier ' + t + '</span><input type="number" class="tier-input" id="songs-tier-' + t + '" value="' + def + '" min="1" max="10" /><span style="font-size:11px;color:var(--muted);font-family:\'DM Mono\',monospace;">songs</span>';
     grid.appendChild(div);
   });
 }
@@ -889,7 +864,7 @@ function getSongsForTier(tier) {
   return el ? parseInt(el.value) || 1 : 1;
 }
 
-// ─── Spotify API helpers ──────────────────────────────────────────────────────
+// Spotify API helpers
 async function spotifyGet(path) {
   const r = await fetch('https://api.spotify.com/v1' + path, {
     headers: { Authorization: 'Bearer ' + accessToken }
@@ -904,15 +879,16 @@ async function spotifyPost(path, body) {
     headers: { Authorization: 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
   });
-  if (!r.ok) {
-    const err = await r.text();
-    throw new Error('Spotify POST error: ' + r.status + ' — ' + err);
-  }
+  if (!r.ok) { const err = await r.text(); throw new Error('Spotify POST error: ' + r.status + ' - ' + err); }
   return r.json();
 }
 
-// ─── Log helper ───────────────────────────────────────────────────────────────
-function log(msg, type = '') {
+// Normalize artist name for matching
+function norm(s) { return s.toLowerCase().replace(/[^a-z0-9]/g, ''); }
+
+// Log helper
+function log(msg, type) {
+  type = type || '';
   const el = document.getElementById('log');
   const line = document.createElement('div');
   line.className = 'log-line ' + type;
@@ -926,7 +902,9 @@ function setProgress(pct, text) {
   document.getElementById('prog-text').textContent = text;
 }
 
-// ─── Main build ───────────────────────────────────────────────────────────────
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// Main build
 async function buildPlaylist() {
   if (!accessToken) { alert('Please authorize Spotify first.'); return; }
   if (!artists.length) { alert('Please upload your artist CSV first.'); return; }
@@ -939,85 +917,109 @@ async function buildPlaylist() {
   const trackUris = [];
   const total = artists.length;
   let done = 0;
-  let notFound = [];
+  const notFound = [];
 
   try {
-    // Get user ID
-    log('Fetching your Spotify profile…', 'info');
+    log('Fetching your Spotify profile...', 'info');
     const me = await spotifyGet('/me');
     spotifyUserId = me.id;
     log('Logged in as: ' + me.display_name, 'ok');
 
-    // Search each artist
     for (const artist of artists) {
       const count = getSongsForTier(artist.tier);
-      log(`Searching: ${artist.name} (Tier ${artist.tier} → ${count} songs)…`);
+      log('Searching: ' + artist.name + ' (Tier ' + artist.tier + ', ' + count + ' songs)...');
 
       try {
-        // Search for artist
+        // Search for artist with exact artist: field filter, get top 5 candidates
         const searchRes = await spotifyGet(
-          `/search?q=${encodeURIComponent(artist.name)}&type=artist&limit=1&market=${market}`
+          '/search?q=artist:' + encodeURIComponent(artist.name) + '&type=artist&limit=5&market=' + market
         );
-        const items = searchRes.artists?.items;
+        const items = (searchRes.artists && searchRes.artists.items) || [];
 
-        if (!items || !items.length) {
-          log(`  ✗ Not found: ${artist.name}`, 'err');
+        const target = norm(artist.name);
+
+        // 1. Exact match
+        let foundArtist = items.find(a => norm(a.name) === target);
+
+        // 2. Partial match by highest popularity
+        if (!foundArtist) {
+          const partials = items.filter(a => norm(a.name).includes(target) || target.includes(norm(a.name)));
+          if (partials.length) {
+            foundArtist = partials.sort((a, b) => (b.popularity || 0) - (a.popularity || 0))[0];
+          }
+        }
+
+        if (!foundArtist) {
+          log('  No confident match for: ' + artist.name, 'err');
           notFound.push(artist.name);
           done++;
-          setProgress(Math.round((done / total) * 80), `${done}/${total} artists processed`);
+          setProgress(Math.round((done / total) * 80), done + '/' + total + ' artists processed');
           continue;
         }
 
-        const foundArtist = items[0];
-        log(`  ✓ Found: ${foundArtist.name}`, 'ok');
+        log('  Matched: ' + foundArtist.name, 'ok');
 
-        // Get top tracks
-        const topRes = await spotifyGet(
-          `/artists/${foundArtist.id}/top-tracks?market=${market}`
+        // Use track search instead of /top-tracks (avoids 403 restriction)
+        const trackRes = await spotifyGet(
+          '/search?q=artist:' + encodeURIComponent(foundArtist.name) + '&type=track&limit=20&market=' + market
         );
-        const tracks = (topRes.tracks || []).slice(0, count);
-        tracks.forEach(t => trackUris.push(t.uri));
-        log(`    Added ${tracks.length} tracks`, 'ok');
+        const allTracks = (trackRes.tracks && trackRes.tracks.items) || [];
+
+        // Deduplicate by track name, only include tracks where this artist is primary, sort by popularity
+        const seen = new Set();
+        const deduped = [];
+        const sorted = allTracks.slice().sort(function(a, b) { return (b.popularity || 0) - (a.popularity || 0); });
+
+        for (const t of sorted) {
+          const isMain = t.artists.some(a => norm(a.name) === norm(foundArtist.name));
+          if (!isMain) continue;
+          const key = norm(t.name);
+          if (!seen.has(key)) {
+            seen.add(key);
+            deduped.push(t);
+          }
+          if (deduped.length >= count) break;
+        }
+
+        deduped.forEach(t => trackUris.push(t.uri));
+        log('  Added ' + deduped.length + ' tracks', 'ok');
 
       } catch (e) {
-        log(`  ✗ Error for ${artist.name}: ${e.message}`, 'err');
+        log('  Error for ' + artist.name + ': ' + e.message, 'err');
         notFound.push(artist.name);
       }
 
       done++;
-      setProgress(Math.round((done / total) * 80), `${done}/${total} artists processed`);
-      await sleep(150); // be polite to rate limits
+      setProgress(Math.round((done / total) * 80), done + '/' + total + ' artists processed');
+      await sleep(200);
     }
 
-    if (!trackUris.length) throw new Error('No tracks found — check artist names and try again.');
+    if (!trackUris.length) throw new Error('No tracks found - check artist names and try again.');
 
-    // Create playlist
-    log('Creating playlist: ' + playlistName + '…', 'info');
-    setProgress(85, 'Creating playlist…');
-    const playlist = await spotifyPost(`/users/${spotifyUserId}/playlists`, {
+    log('Creating playlist: ' + playlistName + '...', 'info');
+    setProgress(85, 'Creating playlist...');
+    const playlist = await spotifyPost('/users/' + spotifyUserId + '/playlists', {
       name: playlistName,
-      description: `ACL 2026 prep playlist — ${artists.length} artists, tiered by priority. Built with ACL Playlist Builder.`,
+      description: 'ACL 2026 prep playlist - ' + artists.length + ' artists, tiered by priority.',
       public: false
     });
 
-    // Add tracks in batches of 100
-    setProgress(90, 'Adding tracks…');
+    setProgress(90, 'Adding tracks...');
     for (let i = 0; i < trackUris.length; i += 100) {
-      await spotifyPost(`/playlists/${playlist.id}/tracks`, {
+      await spotifyPost('/playlists/' + playlist.id + '/tracks', {
         uris: trackUris.slice(i, i + 100)
       });
     }
 
     setProgress(100, 'Done!');
-    log(`✓ Playlist created with ${trackUris.length} tracks!`, 'ok');
-    if (notFound.length) log(`Note: ${notFound.length} artist(s) not found: ${notFound.join(', ')}`, 'err');
+    log('Playlist created with ' + trackUris.length + ' tracks!', 'ok');
+    if (notFound.length) log('Not found: ' + notFound.join(', '), 'err');
 
-    // Show success
     markDone(4);
     activateStep(5);
     document.getElementById('result-sub').textContent =
-      `${trackUris.length} tracks across ${artists.length - notFound.length} artists — ready in Spotify.` +
-      (notFound.length ? ` (${notFound.length} not found: ${notFound.join(', ')})` : '');
+      trackUris.length + ' tracks across ' + (artists.length - notFound.length) + ' artists - ready in Spotify.' +
+      (notFound.length ? ' (' + notFound.length + ' not found: ' + notFound.join(', ') + ')' : '');
     document.getElementById('playlist-link').href = playlist.external_urls.spotify;
 
   } catch (e) {
@@ -1030,7 +1032,6 @@ async function buildPlaylist() {
   }
 }
 
-function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 </script>
 </body>
 </html>
