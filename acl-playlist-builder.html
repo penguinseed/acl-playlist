@@ -506,7 +506,7 @@
 <div class="container">
 
   <div class="header">
-    <div class="eyebrow">✦ Austin City Limits 2026 &nbsp;·&nbsp; v6</div>
+    <div class="eyebrow">✦ Austin City Limits 2026 &nbsp;·&nbsp; v7</div>
     <h1>ACL<br><span>Playlist</span><br>Builder</h1>
     <p class="subtitle">Upload your artist lineup with tier rankings. We'll build a weighted Spotify playlist — more tracks from your must-sees, fewer from your maybes.</p>
   </div>
@@ -1001,7 +1001,7 @@ async function buildPlaylist() {
 
     log('Creating playlist: ' + playlistName + '...', 'info');
     setProgress(85, 'Creating playlist...');
-    const playlist = await spotifyPost('/users/' + spotifyUserId + '/playlists', {
+    const playlist = await spotifyPost('/me/playlists', {
       name: playlistName,
       description: 'ACL 2026 prep playlist - ' + artists.length + ' artists, tiered by priority.',
       public: false
