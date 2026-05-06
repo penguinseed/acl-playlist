@@ -961,7 +961,7 @@ async function buildPlaylist() {
 
         // Use track search instead of /top-tracks (avoids 403 restriction)
         const trackRes = await spotifyGet(
-          '/search?q=artist:' + encodeURIComponent(foundArtist.name) + '&type=track&limit=20&market=' + market
+          '/search?q=' + encodeURIComponent(foundArtist.name) + '&type=track&limit=50&market=' + market
         );
         const allTracks = (trackRes.tracks && trackRes.tracks.items) || [];
 
