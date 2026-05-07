@@ -506,7 +506,7 @@
 <div class="container">
 
   <div class="header">
-    <div class="eyebrow">✦ Austin City Limits 2026 &nbsp;·&nbsp; v9</div>
+    <div class="eyebrow">✦ Austin City Limits 2026 &nbsp;·&nbsp; v10</div>
     <h1>ACL<br><span>Playlist</span><br>Builder</h1>
     <p class="subtitle">Upload your artist lineup with tier rankings. We'll build a weighted Spotify playlist — more tracks from your must-sees, fewer from your maybes.</p>
   </div>
@@ -928,10 +928,7 @@ async function buildPlaylist() {
     const me = await spotifyGet('/me');
     spotifyUserId = me.id;
     log('Logged in as: ' + me.display_name, 'ok');
-    const tokenInfo = await fetch('https://accounts.spotify.com/api/token_info', { headers: { Authorization: 'Bearer ' + accessToken } });
-    log('Token scopes: ' + (accessToken ? accessToken.substring(0,20) + '...' : 'none'), 'info');
-    const scopeTest = await spotifyGet('/me/playlists?limit=1');
-    log('Playlist read OK - scope confirmed', 'ok');
+    log('Token loaded, proceeding...', 'info');
 
     for (const artist of artists) {
       const count = getSongsForTier(artist.tier);
