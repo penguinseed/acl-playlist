@@ -506,7 +506,7 @@
 <div class="container">
 
   <div class="header">
-    <div class="eyebrow">✦ Austin City Limits 2026 &nbsp;·&nbsp; v7</div>
+    <div class="eyebrow">✦ Austin City Limits 2026 &nbsp;·&nbsp; v9</div>
     <h1>ACL<br><span>Playlist</span><br>Builder</h1>
     <p class="subtitle">Upload your artist lineup with tier rankings. We'll build a weighted Spotify playlist — more tracks from your must-sees, fewer from your maybes.</p>
   </div>
@@ -675,14 +675,14 @@ async function startAuth() {
   if (!document.getElementById('playlist-name').value.trim()) {
     alert('Please enter a playlist name.'); return;
   }
-  sessionStorage.setItem('spotify_client_id', clientId);
-  sessionStorage.setItem('playlist_name', document.getElementById('playlist-name').value.trim());
+  localStorage.setItem('spotify_client_id', clientId);
+  localStorage.setItem('playlist_name', document.getElementById('playlist-name').value.trim());
 
   const verifier = generateRandomString(64);
   const challenge = await generateCodeChallenge(verifier);
   const state = generateRandomString(16);
-  sessionStorage.setItem('pkce_verifier', verifier);
-  sessionStorage.setItem('pkce_state', state);
+  localStorage.setItem('pkce_verifier', verifier);
+  localStorage.setItem('pkce_state', state);
 
   const params = new URLSearchParams({
     response_type: 'code',
@@ -710,15 +710,15 @@ async function parseCallback() {
   }
   if (!code) return;
 
-  const savedState = sessionStorage.getItem('pkce_state');
+  const savedState = localStorage.getItem('pkce_state');
   if (returnedState !== savedState) {
     document.getElementById('auth-status').textContent = 'State mismatch - please try again.';
     document.getElementById('auth-status').style.color = 'var(--danger)';
     return;
   }
 
-  const clientId = sessionStorage.getItem('spotify_client_id');
-  const verifier = sessionStorage.getItem('pkce_verifier');
+  const clientId = localStorage.getItem('spotify_client_id');
+  const verifier = localStorage.getItem('pkce_verifier');
   history.replaceState(null, '', window.location.pathname);
   document.getElementById('auth-status').textContent = 'Exchanging code for token...';
 
@@ -738,7 +738,7 @@ async function parseCallback() {
     const data = await resp.json();
     accessToken = data.access_token;
 
-    const savedName = sessionStorage.getItem('playlist_name');
+    const savedName = localStorage.getItem('playlist_name');
     if (clientId) document.getElementById('client-id').value = clientId;
     if (savedName) document.getElementById('playlist-name').value = savedName;
 
@@ -917,7 +917,7 @@ async function buildPlaylist() {
   activateStep(4);
 
   const market = document.getElementById('market').value.trim() || 'US';
-  const playlistName = sessionStorage.getItem('playlist_name') || document.getElementById('playlist-name').value.trim() || 'ACL 2026';
+  const playlistName = localStorage.getItem('playlist_name') || document.getElementById('playlist-name').value.trim() || 'ACL 2026';
   const trackUris = [];
   const total = artists.length;
   let done = 0;
@@ -928,6 +928,10 @@ async function buildPlaylist() {
     const me = await spotifyGet('/me');
     spotifyUserId = me.id;
     log('Logged in as: ' + me.display_name, 'ok');
+    const tokenInfo = await fetch('https://accounts.spotify.com/api/token_info', { headers: { Authorization: 'Bearer ' + accessToken } });
+    log('Token scopes: ' + (accessToken ? accessToken.substring(0,20) + '...' : 'none'), 'info');
+    const scopeTest = await spotifyGet('/me/playlists?limit=1');
+    log('Playlist read OK - scope confirmed', 'ok');
 
     for (const artist of artists) {
       const count = getSongsForTier(artist.tier);
@@ -1004,12 +1008,12 @@ async function buildPlaylist() {
     const playlist = await spotifyPost('/me/playlists', {
       name: playlistName,
       description: 'ACL 2026 prep playlist - ' + artists.length + ' artists, tiered by priority.',
-      public: false
+      public: true
     });
 
     setProgress(90, 'Adding tracks...');
     for (let i = 0; i < trackUris.length; i += 100) {
-      await spotifyPost('/playlists/' + playlist.id + '/tracks', {
+      await spotifyPost('/playlists/' + playlist.id + '/items', {
         uris: trackUris.slice(i, i + 100)
       });
     }
